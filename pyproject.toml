@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-unreal"
-version = "0.1.0"
+version = "0.4.0"
 description = "MCP stdio server for executing Python scripts in Unreal Engine 5"
 readme = "README.md"
 requires-python = ">=3.11"

@@ -24,6 +24,7 @@ from mcp_unreal.knowledge import (
     list_knowledge_resources,
     search_knowledge_base_text,
 )
+from mcp_unreal.structured_tools import execute_structured_tool, structured_tool_definitions
 from mcp_unreal.ue_remote import ExecResult, ExecMode, make_client
 
 log = logging.getLogger(__name__)
@@ -152,7 +153,7 @@ def create_server(
                     "required": ["query"],
                 },
             ),
-        ]
+        ] + structured_tool_definitions()
 
     @app.list_resources()
     async def list_resources() -> list[types.Resource]:
@@ -243,6 +244,23 @@ def create_server(
                     text=search_knowledge_base_text(query),
                 )
             ]
+
+        structured_names = {t.name for t in structured_tool_definitions()}
+        if name in structured_names:
+            payload = execute_structured_tool(
+                name, arguments, client, bridge_url=bridge_url
+            )
+            if isinstance(payload, dict):
+                return [
+                    types.TextContent(
+                        type="text",
+                        text="## " + name + "\n\n```json\n"
+                        + json.dumps(payload, indent=2, default=str)
+                        + "\n```\n",
+                    )
+                ]
+            markdown = _format_result(payload, f"<{name}>", ExecMode.EXECUTE_STATEMENT)
+            return [types.TextContent(type="text", text=markdown)]
 
         if name != "execute-script":
             raise ValueError(f"Unknown tool: {name}")
