@@ -3,16 +3,21 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+import os
+from pathlib import Path, PurePosixPath
 from typing import Any, Optional
 
 import mcp.types as types
 
 from mcp_unreal.ue_remote import ExecMode, ExecResult, make_client
 
-DEFAULT_SCRIPTS = Path.home() / "UnrealEngine" / "scripts"
-DEFAULT_EXPORT = Path.home() / "UnrealEngine" / "export" / "web"
-DEFAULT_SCREENSHOTS = Path.home() / "UnrealEngine" / "screenshots"
+# Work root as the *editor* host sees it (scripts/, export/, screenshots/).
+# Paths are sent to UE, so on a remote Windows editor set e.g.
+# UE_WORK_ROOT=H:/UnrealWork; the default suits an editor on this machine.
+UE_WORK_ROOT = PurePosixPath(os.environ.get("UE_WORK_ROOT") or (Path.home() / "UnrealEngine").as_posix())
+DEFAULT_SCRIPTS = UE_WORK_ROOT / "scripts"
+DEFAULT_EXPORT = UE_WORK_ROOT / "export" / "web"
+DEFAULT_SCREENSHOTS = UE_WORK_ROOT / "screenshots"
 
 
 def structured_tool_definitions() -> list[types.Tool]:
@@ -136,7 +141,7 @@ def structured_tool_definitions() -> list[types.Tool]:
                 "properties": {
                     "output_path": {
                         "type": "string",
-                        "description": "Optional screenshot path; defaults to ~/UnrealEngine/screenshots/.",
+                        "description": "Optional screenshot path on the UE host; defaults to <UE_WORK_ROOT>/screenshots/.",
                     },
                     "width": {"type": "integer", "default": 1280},
                     "height": {"type": "integer", "default": 720},
@@ -180,7 +185,7 @@ paths
         return client.run(code, exec_mode=ExecMode.EVALUATE_STATEMENT, unattended=True)
     if name == "ue_greybox_m1":
         scripts = arguments.get("project_scripts_dir", str(DEFAULT_SCRIPTS))
-        script = Path(scripts) / "greybox_m1.py"
+        script = PurePosixPath(scripts) / "greybox_m1.py"
         return client.run(str(script), exec_mode=ExecMode.EXECUTE_FILE, unattended=True)
     if name == "ue_smoke_test":
         script = DEFAULT_SCRIPTS / "foo_smoke_test.py"
@@ -239,14 +244,12 @@ print(f"COUNT {{len(actors)}}")
         width = int(arguments.get("width", 1280))
         height = int(arguments.get("height", 720))
         output_path = arguments.get("output_path")
-        if output_path:
-            path = Path(output_path)
-        else:
-            DEFAULT_SCREENSHOTS.mkdir(parents=True, exist_ok=True)
-            path = DEFAULT_SCREENSHOTS / "foo-showcase.png"
+        path = output_path or str(DEFAULT_SCREENSHOTS / "foo-showcase.png")
         code = f"""
+import os
 import unreal
-path = {str(path)!r}
+path = {path!r}
+os.makedirs(os.path.dirname(path), exist_ok=True)
 ok = unreal.AutomationLibrary.take_high_res_screenshot({width}, {height}, path)
 print(path)
 print(ok)

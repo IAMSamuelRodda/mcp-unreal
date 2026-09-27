@@ -11,6 +11,6 @@ After changing structured tools here, coordinate with unreal-foo docs in `docs/H
 | `ue_foo_showcase` | Runs `foo_showcase.setup_showcase()` in the live Foo editor project. |
 | `ue_foo_asset_foundation` | Creates `/Game/Foo` folders, `LV_FooArena`, and first Blueprint/UMG asset shells. |
 | `ue_list_actors` | Lists actors in the current editor level, optionally filtered by label prefix. |
-| `ue_screenshot` | Requests a high-resolution viewport screenshot under `~/UnrealEngine/screenshots/` by default. |
+| `ue_screenshot` | Requests a high-resolution viewport screenshot under `<UE_WORK_ROOT>/screenshots/` on the editor host by default. |
 
-Run after syncing `~/repos/unreal-foo/scripts` into `~/UnrealEngine/scripts`.
+Run after syncing `~/repos/unreal-foo/scripts` into `<UE_WORK_ROOT>/scripts` (`H:\UnrealWork\scripts` on win11-gpu; see README → "Windows editor over SSH").

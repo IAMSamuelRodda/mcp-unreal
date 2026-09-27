@@ -67,6 +67,39 @@ bRemoteExecution=True
 
 The bridge starts automatically on UE boot and listens on `http://127.0.0.1:6800`.
 
+### Windows editor over SSH (win11-gpu)
+
+Arc Forge runs the editor on the `win11-gpu` VM and MCP clients on the X Forge Linux host.
+
+| Where | What |
+|-------|------|
+| `H:\UnrealWork\mcp-unreal\ue_python_server\` | Copy of `plugins/ue_python_server/` (bridge + autostart) |
+| `H:\UnrealWork\scripts\` | Foo automation scripts, incl. `ue_autoload.py` |
+| Foo `Config/DefaultEngine.ini` (Perforce `//unreal/foo-main`) | `+StartupScripts=H:/UnrealWork/mcp-unreal/ue_python_server/ue_server_autostart.py` and `+StartupScripts=H:/UnrealWork/scripts/ue_autoload.py` |
+
+Startup script paths are absolute because UE resolves relative ones against the
+engine's working directory and `sys.path`, not the project. `H:` is shared by both
+Windows installs, so the same paths work in the VM and on bare metal.
+
+The bridge binds `127.0.0.1:6800` in the guest. The host reaches it through the
+`win11-gpu-unreal-tunnel.service` user unit (`ssh -L 127.0.0.1:6800:127.0.0.1:6800 win11-gpu`,
+source in `arc-forge-infrastructure/configs/systemd/`), so clients keep
+`UE_BRIDGE_URL=http://127.0.0.1:6800`. Set `UE_WORK_ROOT=H:/UnrealWork` so the
+structured tools send Windows paths to the editor.
+
+After changing the bridge, copy it over:
+
+```bash
+scp plugins/ue_python_server/ue_server*.py win11-gpu:H:/UnrealWork/mcp-unreal/ue_python_server/
+```
+
+Headless check (no desktop session needed; the editor ticks Slate under `-nullrhi`):
+
+```bash
+ssh win11-gpu 'H:\EpicGames\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe H:\UnrealWork\projects\Foo\Foo.uproject -nullrhi -unattended -nosplash -nosound'
+curl -s http://127.0.0.1:6800/ping
+```
+
 ## Usage
 
 ### With the HTTP bridge (recommended)
@@ -109,6 +142,7 @@ All CLI options can be set via environment variables. **Env vars take priority o
 | `MCP_PORT` | `--port` | `8080` | Port for HTTP/SSE transport |
 | `MCP_BIND` | `--bind` | `127.0.0.1` | Bind address for HTTP/SSE transport |
 | `MCP_LOG_LEVEL` | `--log-level` | `WARNING` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
+| `UE_WORK_ROOT` | — | `~/UnrealEngine` | Work root as the editor host sees it (`scripts/`, `export/`, `screenshots/`), e.g. `H:/UnrealWork` |
 
 ## Cursor / VS Code mcp.json
 
